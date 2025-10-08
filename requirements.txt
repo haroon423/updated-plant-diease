@@ -1,6 +1,7 @@
 streamlit==1.36.0
-tensorflow==2.15.0
+tensorflow==2.19.0
 numpy==1.26.0
 pillow==10.2.0
 pandas==2.1.0
+
 
