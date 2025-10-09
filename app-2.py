@@ -2,11 +2,10 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tensorflow as tf
-import pandas as pd
 import os
 
 # ----------------------------
-# 1. Load TFLite model (correct path)
+# 1. Load TFLite model
 # ----------------------------
 BASE_DIR = os.path.dirname(__file__)
 MODEL_PATH = os.path.join(BASE_DIR, "model_compressed.tflite")
@@ -18,7 +17,7 @@ input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
 # ----------------------------
-# 2. Exact 89 disease names
+# 2. Disease names (89)
 # ----------------------------
 disease_names = [
     "apple black rot","apple leaf","apple mosaic virus","apple rust","apple scab",
@@ -48,46 +47,42 @@ disease_names = [
 # ----------------------------
 # 3. Streamlit UI
 # ----------------------------
-st.set_page_config(page_title="Plant Disease Classifier", layout="wide")
-st.title("🌿 Plant Disease Classifier (89 Classes)")
+st.set_page_config(page_title="🌿 Plant Disease Classifier", layout="wide")
+st.title("🌿 Plant Disease Classifier (Single Prediction)")
 
-uploaded_file = st.file_uploader("Upload a plant leaf image", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("📷 Upload a plant leaf image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Preprocess image
+    # ----------------------------
+    # 4. Preprocess and predict
+    # ----------------------------
     img_resized = image.resize((224, 224))
     img_array = np.array(img_resized, dtype=np.float32) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
-    # Run inference
     interpreter.set_tensor(input_details[0]['index'], img_array.astype(input_details[0]['dtype']))
     interpreter.invoke()
     output_data = interpreter.get_tensor(output_details[0]['index'])[0]
 
-    # Predicted class
+    # ----------------------------
+    # 5. Get top prediction
+    # ----------------------------
     top_idx = np.argmax(output_data)
     predicted_disease = disease_names[top_idx]
-    confidence = output_data[top_idx] * 100
+    confidence = float(output_data[top_idx]) * 100
 
-    st.subheader("Predicted Disease")
-    st.success(f"**{predicted_disease}** with confidence: **{confidence:.2f}%**")
+    # ----------------------------
+    # 6. Display results
+    # ----------------------------
+    st.subheader("✅ Prediction Result")
+    st.markdown(f"**Predicted Disease:** 🌱 `{predicted_disease}`")
+    st.markdown(f"**Confidence (Accuracy):** `{confidence:.2f}%`")
 
-    # Top 5 predictions
-    st.subheader("Top 5 Predictions")
-    top_5_idx = np.argsort(output_data)[::-1][:5]
-    top5_df = pd.DataFrame({
-        "Disease": [disease_names[i] for i in top_5_idx],
-        "Confidence (%)": [output_data[i]*100 for i in top_5_idx]
-    })
-    st.dataframe(top5_df)
+    # Optional visual confidence bar
+    st.progress(min(int(confidence), 100))
 
-    # Optional: Full 89-class table
-    if st.checkbox("Show all 89 classes"):
-        df_all = pd.DataFrame({
-            "Disease": disease_names,
-            "Confidence (%)": output_data * 100
-        }).sort_values(by="Confidence (%)", ascending=False)
-        st.dataframe(df_all)
+else:
+    st.info("👆 Please upload a clear leaf image to analyze.")
