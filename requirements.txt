@@ -1,6 +1,4 @@
-tensorflow==2.19.0
-keras==3.5.0
-numpy
-Pillow
-streamlit
-rich==13.9.4
+streamlit>=1.38.0
+tensorflow-cpu==2.17.0
+pillow==10.4.0
+numpy==1.26.4
