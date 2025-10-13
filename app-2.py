@@ -3,26 +3,37 @@ import tensorflow as tf
 from PIL import Image
 import numpy as np
 import os
+import logging
+
+# Set up logging to debug where the app is stuck
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 st.title("🌿 Plant Disease Detection System")
 
 @st.cache_resource
 def load_model():
+    logger.info("Starting model loading...")
     try:
-        # Adjust path if model is in a subdirectory, e.g., "models/plant_disease_model_high_acc.keras"
         model_path = "plant_disease_model_high_acc.keras"
         if not os.path.exists(model_path):
             st.error(f"❌ Model file not found at {model_path}. Check repository.")
+            logger.error(f"Model file not found: {model_path}")
             return None
         model = tf.keras.models.load_model(model_path, compile=False)
+        logger.info("Model loaded successfully")
         return model
     except Exception as e:
         st.error(f"❌ Model failed to load: {e}")
+        logger.error(f"Model loading failed: {e}")
         return None
 
+# Load model
+logger.info("Attempting to load model")
 model = load_model()
 
 if model is None:
+    st.error("🚫 Stopping app due to model loading failure")
     st.stop()
 
 st.success("✅ Model loaded successfully!")
@@ -52,20 +63,33 @@ class_names = [
     "tomato septoria leaf spot", "tomato yellow leaf curl virus", "zucchini yellow mosaic virus"
 ]
 
+# Add a cache clear button for debugging
+if st.button("Clear Cache"):
+    st.cache_resource.clear()
+    st.experimental_rerun()
+
 uploaded_file = st.file_uploader("📤 Upload a leaf image...", type=["jpg", "png", "jpeg"])
 
 if uploaded_file:
+    logger.info("Image uploaded, starting processing")
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
     if st.button("🔍 Predict Disease"):
         with st.spinner("Analyzing..."):
-            img = image.resize((224, 224))
-            img_array = np.array(img) / 255.0
-            img_array = np.expand_dims(img_array, axis=0)
-            preds = model.predict(img_array)
-            pred_class = class_names[np.argmax(preds[0])]
-            confidence = np.max(preds[0]) * 100
-            st.success(f"✅ Predicted: **{pred_class}** ({confidence:.2f}% confidence)")
+            try:
+                logger.info("Resizing image")
+                img = image.resize((224, 224))
+                img_array = np.array(img) / 255.0
+                img_array = np.expand_dims(img_array, axis=0)
+                logger.info("Running model prediction")
+                preds = model.predict(img_array)
+                pred_class = class_names[np.argmax(preds[0])]
+                confidence = np.max(preds[0]) * 100
+                logger.info(f"Prediction complete: {pred_class}")
+                st.success(f"✅ Predicted: **{pred_class}** ({confidence:.2f}% confidence)")
+            except Exception as e:
+                st.error(f"❌ Prediction failed: {e}")
+                logger.error(f"Prediction failed: {e}")
 else:
     st.info("👆 Upload an image to get started.")
