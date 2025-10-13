@@ -1,27 +1,26 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-import os
 from PIL import Image
+import os
 
-st.set_page_config(page_title="🌿 Plant Disease Detection", page_icon="🌱", layout="centered")
+st.set_page_config(page_title="🌿 Plant Disease Detection", layout="centered")
 st.title("🌿 Plant Disease Detection System")
 
-# ✅ Load Model
 @st.cache_resource
 def load_model():
     model_path = "plant_disease_model_high_acc.keras"
-
     st.write("📂 Current directory:", os.getcwd())
     st.write("📁 Available files:", os.listdir())
 
     if not os.path.exists(model_path):
-        st.error(f"❌ Model file not found: {model_path}")
+        st.error(f"❌ Model not found: {model_path}")
         st.stop()
 
     try:
         model = tf.keras.models.load_model(model_path, compile=False, safe_mode=False)
         st.success("✅ Model loaded successfully!")
+        st.write("🔹 Model input shape:", model.input_shape)
         return model
     except Exception as e:
         st.error(f"❌ Failed to load model: {e}")
@@ -29,7 +28,6 @@ def load_model():
 
 model = load_model()
 
-# ✅ 89 Class Labels
 class_names = [
     "apple black rot","apple leaf","apple mosaic virus","apple rust","apple scab",
     "banana leaf","banana panama disease","basil downy mildew","basil leaf",
@@ -55,16 +53,15 @@ class_names = [
     "tomato septoria leaf spot","tomato yellow leaf curl virus","zucchini yellow mosaic virus"
 ]
 
-# ✅ Predict
 def predict(image):
-    img = image.resize((224, 224))
+    img = image.convert("RGB")  # ✅ Force 3 channels
+    img = img.resize((224, 224))  # ✅ Match model input size
     img_array = np.expand_dims(np.array(img) / 255.0, axis=0)
     preds = model.predict(img_array)
     predicted_class = class_names[np.argmax(preds)]
     confidence = np.max(preds) * 100
     return predicted_class, confidence
 
-# ✅ UI Upload
 uploaded_file = st.file_uploader("📤 Upload a leaf image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
