@@ -7,10 +7,23 @@ st.title("🌿 Plant Disease Detection System")
 
 @st.cache_resource
 def load_model():
-    model = tf.keras.models.load_model("plant_disease_model_high_acc.keras")
-    return model
+    try:
+        model = tf.keras.models.load_model(
+            "plant_disease_model_high_acc.keras",
+            compile=False,  # prevent optimizer deserialization issues
+            safe_mode=False  # allow custom layer loading if any
+        )
+        return model
+    except Exception as e:
+        st.error(f"❌ Model failed to load: {e}")
+        return None
 
 model = load_model()
+
+if model is not None:
+    st.success("✅ Model loaded successfully!")
+else:
+    st.stop()
 
 class_names = [
     "apple black rot","apple leaf","apple mosaic virus","apple rust","apple scab",
@@ -51,7 +64,6 @@ if uploaded_file is not None:
             preds = model.predict(img_array)
             pred_class = class_names[np.argmax(preds)]
             confidence = np.max(preds) * 100
-
         st.success(f"✅ Predicted: **{pred_class}** ({confidence:.2f}% confidence)")
 else:
     st.info("👆 Upload an image to get started.")
