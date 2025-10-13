@@ -15,7 +15,7 @@ st.title("🌿 Plant Disease Detection System")
 def load_model():
     logger.info("Starting model loading...")
     try:
-        model_path = "fixed_plant_disease_model.keras"  # Adjust to "models/fixed_plant_disease_model.keras" if needed
+        model_path = "plant_disease_model_high_acc.keras"  # Use existing model file
         if not os.path.exists(model_path):
             st.error(f"❌ Model file not found at {model_path}. Check repository.")
             logger.error(f"Model file not found: {model_path}")
@@ -96,3 +96,4 @@ if uploaded_file:
                 logger.error(f"Prediction failed: {e}")
 else:
     st.info("👆 Upload an image to get started.")
+
