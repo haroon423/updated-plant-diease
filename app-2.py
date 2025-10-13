@@ -1,22 +1,21 @@
 import streamlit as st
+import tensorflow as tf
 import numpy as np
 from PIL import Image
-import tensorflow as tf
-import os
 
-BASE_DIR = os.path.dirname(__file__)
-MODEL_PATH = os.path.join(BASE_DIR, "plant_disease_model_high_acc.keras")
-
+# 🌱 Load trained model
+MODEL_PATH = "plant_disease_model_high_acc.keras"
 st.write(f"Model path: {MODEL_PATH}")
-st.write(f"File exists: {os.path.exists(MODEL_PATH)}")
 
 try:
     model = tf.keras.models.load_model(MODEL_PATH)
+    st.success("✅ Model loaded successfully!")
 except Exception as e:
     st.error(f"❌ Model failed to load: {e}")
     st.stop()
 
-disease_names = [
+# 🌾 Class labels (89 total)
+class_names = [
     "apple black rot","apple leaf","apple mosaic virus","apple rust","apple scab",
     "banana leaf","banana panama disease","basil downy mildew","basil leaf",
     "bean halo blight","bean leaf","bean mosaic virus","bean rust","bell pepper leaf",
@@ -41,38 +40,31 @@ disease_names = [
     "tomato septoria leaf spot","tomato yellow leaf curl virus","zucchini yellow mosaic virus"
 ]
 
+# 🌿 Page config
 st.set_page_config(page_title="🌿 Plant Disease Classifier", layout="wide")
-st.title("🌿 Plant Disease Classifier (Single Prediction)")
+st.title("🌱 Plant Disease Detection System")
 
-uploaded_file = st.file_uploader("📷 Upload a plant leaf image", type=["jpg", "jpeg", "png"])
+# 📤 Upload Image
+uploaded_file = st.file_uploader("Upload a leaf image", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
+if uploaded_file:
     image = Image.open(uploaded_file)
 
-    # Force image into RGB (3 channels)
-    image = image.convert("RGB")
+    # Ensure image has 3 channels (RGB)
+    if image.mode != "RGB":
+        image = image.convert("RGB")
 
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    img_resized = image.resize((224, 224))
-    img_array = np.array(img_resized, dtype=np.float32) / 255.0
-
-    # Guarantee 4D input with 3 channels
-    if img_array.ndim == 2:
-        img_array = np.stack((img_array,)*3, axis=-1)
-    elif img_array.shape[-1] == 1:
-        img_array = np.concatenate([img_array]*3, axis=-1)
-
+    # Preprocess image
+    img = image.resize((224, 224))
+    img_array = np.array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
+    # Predict
     prediction = model.predict(img_array)
-    top_idx = np.argmax(prediction)
-    predicted_disease = disease_names[top_idx]
-    confidence = float(prediction[0][top_idx]) * 100
+    predicted_class = class_names[np.argmax(prediction)]
+    confidence = np.max(prediction) * 100
 
-    st.subheader("✅ Prediction Result")
-    st.markdown(f"**Predicted Disease:** 🌱 `{predicted_disease}`")
-    st.markdown(f"**Confidence (Accuracy):** `{confidence:.2f}%`")
-    st.progress(min(int(confidence), 100))
-else:
-    st.info("👆 Please upload a clear leaf image to analyze.")
+    st.success(f"✅ **Prediction:** {predicted_class}")
+    st.info(f"📊 **Confidence:** {confidence:.2f}%")
