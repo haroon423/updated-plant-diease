@@ -15,13 +15,12 @@ st.title("🌿 Plant Disease Detection System")
 def load_model():
     logger.info("Starting model loading...")
     try:
-        model_path = "plant_disease_model_high_acc.keras"
+        model_path = "fixed_plant_disease_model.keras"  # Use the fixed model
         if not os.path.exists(model_path):
             st.error(f"❌ Model file not found at {model_path}. Check repository.")
             logger.error(f"Model file not found: {model_path}")
             return None
-        # Load model with safe_mode=False to bypass strict validation
-        model = tf.keras.models.load_model(model_path, compile=False, safe_mode=False)
+        model = tf.keras.models.load_model(model_path, compile=False)
         logger.info(f"Model input shape: {model.input_shape}")
         return model
     except Exception as e:
@@ -73,16 +72,15 @@ uploaded_file = st.file_uploader("📤 Upload a leaf image...", type=["jpg", "pn
 
 if uploaded_file:
     logger.info("Image uploaded, starting processing")
-    image = Image.open(uploaded_file).convert("RGB")  # Ensure RGB (3 channels)
+    image = Image.open(uploaded_file).convert("RGB")  # Ensure RGB
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
     if st.button("🔍 Predict Disease"):
         with st.spinner("Analyzing..."):
             try:
-                # Try both 224x224 and 225x225 to match model input
                 logger.info("Resizing image")
-                img = image.resize((225, 225))  # Try 225x225 based on error
-                img_array = np.array(img) / 255.0  # Normalize to [0, 1]
+                img = image.resize((225, 225))  # Match model input
+                img_array = np.array(img) / 255.0  # Normalize
                 logger.info(f"Image array shape: {img_array.shape}")  # Should be (225, 225, 3)
                 img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
                 logger.info(f"Input array shape: {img_array.shape}")  # Should be (1, 225, 225, 3)
