@@ -5,7 +5,7 @@ import numpy as np
 import os
 import logging
 
-# Set up logging to debug where the app is stuck
+# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class_names = [
     "tomato septoria leaf spot", "tomato yellow leaf curl virus", "zucchini yellow mosaic virus"
 ]
 
-# Add a cache clear button for debugging
+# Cache clear button for debugging
 if st.button("Clear Cache"):
     st.cache_resource.clear()
     st.experimental_rerun()
@@ -72,16 +72,18 @@ uploaded_file = st.file_uploader("📤 Upload a leaf image...", type=["jpg", "pn
 
 if uploaded_file:
     logger.info("Image uploaded, starting processing")
-    image = Image.open(uploaded_file).convert("RGB")
+    image = Image.open(uploaded_file).convert("RGB")  # Ensure RGB (3 channels)
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
     if st.button("🔍 Predict Disease"):
         with st.spinner("Analyzing..."):
             try:
                 logger.info("Resizing image")
-                img = image.resize((224, 224))
-                img_array = np.array(img) / 255.0
-                img_array = np.expand_dims(img_array, axis=0)
+                img = image.resize((224, 224))  # Match model input size
+                img_array = np.array(img) / 255.0  # Normalize to [0, 1]
+                logger.info(f"Image array shape: {img_array.shape}")  # Should be (224, 224, 3)
+                img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+                logger.info(f"Input array shape: {img_array.shape}")  # Should be (1, 224, 224, 3)
                 logger.info("Running model prediction")
                 preds = model.predict(img_array)
                 pred_class = class_names[np.argmax(preds[0])]
