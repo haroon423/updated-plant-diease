@@ -5,7 +5,7 @@ import tensorflow as tf
 import os
 
 # ----------------------------
-# 1. Load .keras Model
+# 1. Load Model
 # ----------------------------
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "plant_disease_model_high_acc.keras")
 
@@ -19,8 +19,13 @@ except Exception as e:
     st.error(f"❌ Model failed to load: {e}")
     st.stop()
 
+# Detect expected input shape
+input_shape = model.input_shape
+st.write("Model Input Shape:", input_shape)
+expected_channels = input_shape[-1]
+
 # ----------------------------
-# 2. Disease Names (89)
+# 2. Disease Names
 # ----------------------------
 disease_names = [
     "apple black rot","apple leaf","apple mosaic virus","apple rust","apple scab",
@@ -51,24 +56,34 @@ disease_names = [
 # 3. Streamlit UI
 # ----------------------------
 st.set_page_config(page_title="🌿 Plant Disease Classifier", layout="wide")
-st.title("🌿 Plant Disease Classifier (Using .keras Model)")
+st.title("🌿 Plant Disease Classifier (.keras Model)")
 
 uploaded_file = st.file_uploader("📷 Upload a plant leaf image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Read and display image
-    image = Image.open(uploaded_file).convert("RGB")
+    image = Image.open(uploaded_file)
+
+    # Convert based on model input
+    if expected_channels == 3:
+        image = image.convert("RGB")
+    elif expected_channels == 1:
+        image = image.convert("L")
+
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # ----------------------------
-    # 4. Preprocess the image
-    # ----------------------------
-    img_resized = image.resize((225, 225))  # Must match model input
+    # Resize to model input size (224 or 225)
+    target_size = (input_shape[1], input_shape[2])
+    img_resized = image.resize(target_size)
     img_array = np.array(img_resized, dtype=np.float32) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)  # (1, 225, 225, 3)
+
+    # Add channel axis if grayscale
+    if expected_channels == 1:
+        img_array = np.expand_dims(img_array, axis=-1)
+
+    img_array = np.expand_dims(img_array, axis=0)  # (1, H, W, C)
 
     # ----------------------------
-    # 5. Predict
+    # 4. Predict
     # ----------------------------
     predictions = model.predict(img_array)
     top_idx = np.argmax(predictions[0])
@@ -76,7 +91,7 @@ if uploaded_file is not None:
     confidence = float(predictions[0][top_idx]) * 100
 
     # ----------------------------
-    # 6. Display Results
+    # 5. Display Results
     # ----------------------------
     st.subheader("✅ Prediction Result")
     st.markdown(f"**Predicted Disease:** 🌱 `{predicted_disease}`")
