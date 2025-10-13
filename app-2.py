@@ -15,7 +15,7 @@ st.title("🌿 Plant Disease Detection System")
 def load_model():
     logger.info("Starting model loading...")
     try:
-        model_path = "fixed_plant_disease_model.keras"  # Use the fixed model
+        model_path = "fixed_plant_disease_model.keras"  # Adjust to "models/fixed_plant_disease_model.keras" if needed
         if not os.path.exists(model_path):
             st.error(f"❌ Model file not found at {model_path}. Check repository.")
             logger.error(f"Model file not found: {model_path}")
@@ -79,11 +79,12 @@ if uploaded_file:
         with st.spinner("Analyzing..."):
             try:
                 logger.info("Resizing image")
-                img = image.resize((225, 225))  # Match model input
-                img_array = np.array(img) / 255.0  # Normalize
-                logger.info(f"Image array shape: {img_array.shape}")  # Should be (225, 225, 3)
+                img = image.resize((224, 224))  # Match training input
+                img_array = np.array(img) / 255.0  # Normalize to [0, 1]
+                img_array = tf.keras.applications.efficientnet.preprocess_input(img_array)  # Match training preprocessing
+                logger.info(f"Image array shape: {img_array.shape}")  # Should be (224, 224, 3)
                 img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-                logger.info(f"Input array shape: {img_array.shape}")  # Should be (1, 225, 225, 3)
+                logger.info(f"Input array shape: {img_array.shape}")  # Should be (1, 224, 224, 3)
                 logger.info("Running model prediction")
                 preds = model.predict(img_array)
                 pred_class = class_names[np.argmax(preds[0])]
