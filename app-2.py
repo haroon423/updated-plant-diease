@@ -5,16 +5,12 @@ import tensorflow as tf
 import os
 
 # ----------------------------
-# 1. Load TFLite model
+# 1. Load Keras model
 # ----------------------------
 BASE_DIR = os.path.dirname(__file__)
-MODEL_PATH = os.path.join(BASE_DIR, "model_compressed.tflite")
+MODEL_PATH = os.path.join(BASE_DIR, "plant_disease_model_high_acc.keras")
 
-interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
-interpreter.allocate_tensors()
-
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+model = tf.keras.models.load_model(MODEL_PATH)
 
 # ----------------------------
 # 2. Disease names (89)
@@ -63,16 +59,14 @@ if uploaded_file is not None:
     img_array = np.array(img_resized, dtype=np.float32) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
-    interpreter.set_tensor(input_details[0]['index'], img_array.astype(input_details[0]['dtype']))
-    interpreter.invoke()
-    output_data = interpreter.get_tensor(output_details[0]['index'])[0]
+    predictions = model.predict(img_array)[0]
 
     # ----------------------------
     # 5. Get top prediction
     # ----------------------------
-    top_idx = np.argmax(output_data)
+    top_idx = np.argmax(predictions)
     predicted_disease = disease_names[top_idx]
-    confidence = float(output_data[top_idx]) * 100
+    confidence = float(predictions[top_idx]) * 100
 
     # ----------------------------
     # 6. Display results
@@ -80,8 +74,6 @@ if uploaded_file is not None:
     st.subheader("✅ Prediction Result")
     st.markdown(f"**Predicted Disease:** 🌱 `{predicted_disease}`")
     st.markdown(f"**Confidence (Accuracy):** `{confidence:.2f}%`")
-
-    # Optional visual confidence bar
     st.progress(min(int(confidence), 100))
 
 else:
