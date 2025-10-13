@@ -48,19 +48,26 @@ class_labels = [
 
 uploaded_file = st.file_uploader("📤 Upload a leaf image", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None and model:
+if uploaded_file is not None and model is not None:
+    # Open and ensure RGB (3 channels)
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded Leaf Image", use_column_width=True)
 
-    image = image.resize((225, 225))
-    img_array = np.array(image) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
+    # Resize to 224x224 — standard input size for most CNNs (EfficientNet, ResNet, etc.)
+    image = image.resize((224, 224))
+    img_array = np.array(image) / 255.0  # Normalize to [0,1]
+    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
 
+    # Optional: Debug shape (uncomment if needed)
+    # st.write(f"Input tensor shape: {img_array.shape}")
+
+    # Make prediction
     preds = model.predict(img_array)
     class_idx = np.argmax(preds)
     confidence = np.max(preds)
 
     st.success(f"🌿 Predicted Disease: **{class_labels[class_idx]}**")
-    st.info(f"📊 Confidence: {confidence*100:.2f}%")
-elif uploaded_file is not None and not model:
+    st.info(f"📊 Confidence: {confidence * 100:.2f}%")
+
+elif uploaded_file is not None and model is None:
     st.warning("⚠️ Model not loaded. Please check your .keras file.")
