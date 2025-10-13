@@ -4,9 +4,6 @@ from PIL import Image
 import tensorflow as tf
 import os
 
-# ----------------------------
-# 1. Load Model
-# ----------------------------
 BASE_DIR = os.path.dirname(__file__)
 MODEL_PATH = os.path.join(BASE_DIR, "plant_disease_model_high_acc.keras")
 
@@ -19,9 +16,6 @@ except Exception as e:
     st.error(f"❌ Model failed to load: {e}")
     st.stop()
 
-# ----------------------------
-# 2. Disease Names (89)
-# ----------------------------
 disease_names = [
     "apple black rot","apple leaf","apple mosaic virus","apple rust","apple scab",
     "banana leaf","banana panama disease","basil downy mildew","basil leaf",
@@ -47,9 +41,6 @@ disease_names = [
     "tomato septoria leaf spot","tomato yellow leaf curl virus","zucchini yellow mosaic virus"
 ]
 
-# ----------------------------
-# 3. Streamlit UI
-# ----------------------------
 st.set_page_config(page_title="🌿 Plant Disease Classifier", layout="wide")
 st.title("🌿 Plant Disease Classifier (Single Prediction)")
 
@@ -58,17 +49,20 @@ uploaded_file = st.file_uploader("📷 Upload a plant leaf image", type=["jpg", 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
 
-    # Ensure image is RGB (handle grayscale automatically)
-    if image.mode != "RGB":
-        image = image.convert("RGB")
+    # Force image into RGB (3 channels)
+    image = image.convert("RGB")
 
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # ----------------------------
-    # 4. Preprocess and Predict
-    # ----------------------------
     img_resized = image.resize((224, 224))
     img_array = np.array(img_resized, dtype=np.float32) / 255.0
+
+    # Guarantee 4D input with 3 channels
+    if img_array.ndim == 2:
+        img_array = np.stack((img_array,)*3, axis=-1)
+    elif img_array.shape[-1] == 1:
+        img_array = np.concatenate([img_array]*3, axis=-1)
+
     img_array = np.expand_dims(img_array, axis=0)
 
     prediction = model.predict(img_array)
@@ -76,13 +70,9 @@ if uploaded_file is not None:
     predicted_disease = disease_names[top_idx]
     confidence = float(prediction[0][top_idx]) * 100
 
-    # ----------------------------
-    # 5. Display Results
-    # ----------------------------
     st.subheader("✅ Prediction Result")
     st.markdown(f"**Predicted Disease:** 🌱 `{predicted_disease}`")
     st.markdown(f"**Confidence (Accuracy):** `{confidence:.2f}%`")
-
     st.progress(min(int(confidence), 100))
 else:
     st.info("👆 Please upload a clear leaf image to analyze.")
