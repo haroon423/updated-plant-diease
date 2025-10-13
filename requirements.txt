@@ -3,3 +3,4 @@ keras==3.5.0
 numpy
 Pillow
 streamlit
+rich==13.9.4
