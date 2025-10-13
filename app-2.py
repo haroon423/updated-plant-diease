@@ -4,100 +4,63 @@ import numpy as np
 from PIL import Image
 import os
 
-st.set_page_config(page_title="🌿 Plant Disease Detection System", layout="centered")
-
 st.title("🌿 Plant Disease Detection System")
 st.write("Upload a plant leaf image to identify the disease type and confidence.")
 
-# ---------------------------
-# Load Model
-# ---------------------------
 @st.cache_resource
 def load_model():
-    try:
-        st.write("Running load_model().")
-        st.write(f"📂 Current directory: {os.getcwd()}")
-        st.write(f"📁 Available files: {os.listdir(os.getcwd())}")
+    st.write("Running load_model().")
+    cwd = os.getcwd()
+    st.write(f"\n📂 Current directory: {cwd}\n")
+    st.write(f"\n📁 Available files: {os.listdir(cwd)}\n")
 
-        model_path = "plant_disease_model_high_acc.keras"
-        if not os.path.exists(model_path):
-            st.error(f"❌ File not found: {model_path}")
-            return None
-
-        model = tf.keras.models.load_model(model_path)
-        st.success("✅ Model loaded successfully!")
-        st.write(f"🔹 Model Input Shape: {model.input_shape}")
-        return model
-    except Exception as e:
-        st.error(f"❌ Failed to load model: {str(e)}")
+    model_path = "plant_disease_model_high_acc.keras"
+    if not os.path.exists(model_path):
+        st.error(f"❌ File not found: {model_path}")
+        st.warning("⚠️ Model not loaded. Please ensure your .keras model file is in the same directory.")
         return None
 
+    try:
+        model = tf.keras.models.load_model(model_path)
+        st.success("✅ Model loaded successfully!")
+        return model
+    except Exception as e:
+        st.error(f"❌ Failed to load model: {e}")
+        return None
 
 model = load_model()
 
-# ---------------------------
-# Class Names (89 total)
-# ---------------------------
-class_names = [
-    "apple black rot","apple leaf","apple mosaic virus","apple rust","apple scab",
-    "banana leaf","banana panama disease","basil downy mildew","basil leaf",
-    "bean halo blight","bean leaf","bean mosaic virus","bean rust","bell pepper leaf",
-    "bell pepper leaf spot","blueberry leaf","blueberry rust","broccoli downy mildew",
-    "broccoli leaf","cabbage alternaria leaf spot","cabbage leaf","carrot cavity spot",
-    "cauliflower alternaria leaf spot","cauliflower leaf","celery anthracnose",
-    "celery early blight","celery leaf","cherry leaf","cherry leaf spot",
-    "cherry powdery mildew","citrus canker","citrus greening disease","coffee leaf",
-    "coffee leaf rust","corn gray leaf spot","corn leaf","corn northern leaf blight",
-    "corn rust","corn smut","cucumber angular leaf spot","cucumber bacterial wilt",
-    "cucumber leaf","cucumber powdery mildew","eggplant cercospora leaf spot",
-    "eggplant leaf","garlic leaf","garlic leaf blight","garlic rust","ginger leaf",
-    "ginger leaf spot","ginger sheath blight","grape black rot","grape downy mildew",
-    "grape leaf","grape leaf spot","grapevine leafroll disease","lettuce downy mildew",
-    "lettuce leaf","lettuce mosaic virus","maple leaf","maple tar spot","peach leaf",
-    "peach leaf curl","plum leaf","plum pocket disease","potato early blight",
-    "potato late blight","potato leaf","raspberry leaf","rice blast","rice leaf",
-    "rice sheath blight","soybean leaf","squash leaf","squash powdery mildew",
-    "strawberry anthracnose","strawberry leaf","strawberry leaf scorch","tobacco leaf",
-    "tobacco mosaic virus","tomato bacterial leaf spot","tomato early blight",
-    "tomato late blight","tomato leaf","tomato leaf mold","tomato mosaic virus",
-    "tomato septoria leaf spot","tomato yellow leaf curl virus","zucchini yellow mosaic virus"
+class_labels = [
+    'Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
+    'Blueberry___healthy', 'Cherry_(including_sour)___Powdery_mildew', 'Cherry_(including_sour)___healthy',
+    'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot', 'Corn_(maize)___Common_rust_',
+    'Corn_(maize)___Northern_Leaf_Blight', 'Corn_(maize)___healthy', 'Grape___Black_rot',
+    'Grape___Esca_(Black_Measles)', 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)', 'Grape___healthy',
+    'Orange___Haunglongbing_(Citrus_greening)', 'Peach___Bacterial_spot', 'Peach___healthy',
+    'Pepper,_bell___Bacterial_spot', 'Pepper,_bell___healthy', 'Potato___Early_blight',
+    'Potato___Late_blight', 'Potato___healthy', 'Raspberry___healthy', 'Soybean___healthy',
+    'Squash___Powdery_mildew', 'Strawberry___Leaf_scorch', 'Strawberry___healthy',
+    'Tomato___Bacterial_spot', 'Tomato___Early_blight', 'Tomato___Late_blight',
+    'Tomato___Leaf_Mold', 'Tomato___Septoria_leaf_spot', 'Tomato___Spider_mites Two-spotted_spider_mite',
+    'Tomato___Target_Spot', 'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 'Tomato___Tomato_mosaic_virus',
+    'Tomato___healthy'
 ]
 
-# ---------------------------
-# Prediction Function
-# ---------------------------
-def predict_disease(image):
-    if model is None:
-        st.warning("⚠️ Model not loaded. Cannot predict.")
-        return None, None
+uploaded_file = st.file_uploader("📤 Upload a leaf image", type=["jpg", "jpeg", "png"])
 
-    img = image.convert("RGB")  # ✅ Force 3 channels
-    img = img.resize((224, 224))
-    img_array = np.array(img) / 255.0
+if uploaded_file is not None and model:
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="Uploaded Leaf Image", use_column_width=True)
+
+    image = image.resize((225, 225))
+    img_array = np.array(image) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
-    predictions = model.predict(img_array)
-    class_idx = np.argmax(predictions)
-    confidence = np.max(predictions)
-    return class_idx, confidence
+    preds = model.predict(img_array)
+    class_idx = np.argmax(preds)
+    confidence = np.max(preds)
 
-
-# ---------------------------
-# Streamlit UI
-# ---------------------------
-if model:
-    uploaded_file = st.file_uploader("📤 Upload Leaf Image", type=["jpg", "jpeg", "png"])
-
-    if uploaded_file:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image", use_container_width=True)
-
-        with st.spinner("🔍 Analyzing disease..."):
-            class_idx, confidence = predict_disease(image)
-            if class_idx is not None:
-                st.subheader(f"🩺 Predicted Disease: {class_names[class_idx].title()}")
-                st.write(f"🎯 Confidence: {confidence*100:.2f}%")
-            else:
-                st.error("❌ Could not predict disease. Please try again.")
-else:
-    st.warning("⚠️ Model not loaded. Please ensure your `.keras` model file is in the same directory.")
+    st.success(f"🌿 Predicted Disease: **{class_labels[class_idx]}**")
+    st.info(f"📊 Confidence: {confidence*100:.2f}%")
+elif uploaded_file is not None and not model:
+    st.warning("⚠️ Model not loaded. Please check your .keras file.")
